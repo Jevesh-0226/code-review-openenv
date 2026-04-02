@@ -259,20 +259,26 @@ class SimpleHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         """Handle GET requests with HTML response."""
         self.send_response(200)
-        self.send_header("Content-type", "text/html")
+        self.send_header("Content-type", "text/html; charset=utf-8")
         self.end_headers()
 
         message = """
         <html>
-        <head><title>CodeReviewEnv</title></head>
-        <body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px;">
-            <h1>CodeReviewEnv is Running ✅</h1>
-            <p style="font-size: 16px; color: #555;">
-                Evaluation completed successfully.
-            </p>
-            <p style="font-size: 14px; color: #888;">
-                Check logs for detailed results.
-            </p>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>CodeReviewEnv</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background-color: #f5f5f5;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h1 style="margin: 0; color: #2c3e50;">CodeReviewEnv is Running ✅</h1>
+                <p style="font-size: 16px; color: #555; margin-top: 20px;">
+                    Evaluation completed successfully.
+                </p>
+                <p style="font-size: 14px; color: #888;">
+                    Check logs for detailed results.
+                </p>
+            </div>
         </body>
         </html>
         """
