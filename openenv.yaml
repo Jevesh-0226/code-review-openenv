@@ -1,0 +1,135 @@
+name: CodeReviewEnv
+version: 1.0.0
+
+description: |
+  An OpenEnv environment where AI agents learn to debug and improve Python code
+  through a real-world code review and fixing task. Agents interact with the
+  environment to identify and fix bugs while optimizing for performance and
+  code quality.
+
+entrypoint: env.code_review_env:create_env
+
+# Environment configuration
+env_config:
+  seed: 42
+  max_attempts: 5
+
+# Task definitions
+tasks:
+  - name: easy
+    difficulty: easy
+    description: "Fix off-by-one error in range-based sum function"
+    points: 25
+    
+  - name: medium
+    difficulty: medium
+    description: "Fix string reversal logic with proper whitespace handling"
+    points: 35
+    
+  - name: hard
+    difficulty: hard
+    description: "Optimize recursive Fibonacci with memoization and edge case handling"
+    points: 40
+
+# API support
+api:
+  reset:
+    description: "Initialize environment with a task"
+    parameters:
+      difficulty:
+        type: string
+        values: ["easy", "medium", "hard"]
+        default: "easy"
+    returns:
+      observation:
+        type: Observation
+        fields:
+          - problem_description
+          - buggy_code
+          - test_cases
+          - attempt_count
+          - best_score
+          - previous_feedback
+  
+  step:
+    description: "Submit fixed code and receive reward"
+    parameters:
+      fixed_code:
+        type: string
+        description: "The agent's proposed fix"
+    returns:
+      observation:
+        type: Observation
+      reward:
+        type: float
+        range: [0.0, 1.0]
+      done:
+        type: boolean
+      info:
+        type: Info
+        fields:
+          - test_passed
+          - test_total
+          - test_score
+          - syntax_valid
+          - code_quality
+          - error_messages
+          - test_details
+  
+  state:
+    description: "Get current environment state"
+    returns:
+      state:
+        type: dict
+        fields:
+          - attempt_count
+          - best_score
+          - done
+          - difficulty
+          - rewards
+          - average_reward
+
+# Reward function specification
+reward:
+  type: composite
+  range: [0.0, 1.0]
+  components:
+    - name: test_case_success
+      weight: 0.6
+      range: [0.0, 1.0]
+      description: "Fraction of test cases passed"
+    
+    - name: syntax_validity
+      weight: 0.2
+      range: [0.0, 1.0]
+      description: "Whether code is syntactically valid"
+    
+    - name: code_quality
+      weight: 0.2
+      range: [0.0, 1.0]
+      description: "Code quality heuristic assessment"
+  
+  penalties:
+    runtime_error: -0.2
+    efficiency_issue: -0.1
+  
+  final_processing: "clamp to [0.0, 1.0]"
+
+# Baseline agent configuration
+baseline_agent:
+  type: groq-llm
+  model: auto-select (tries llama-3.1-70b, llama-3.1-8b, mixtral-8x7b, gemma-7b)
+  temperature: 0.0
+  max_tokens: 2048
+  top_p: 1.0
+  api_key_env: GROQ_API_KEY
+
+# Evaluation configuration
+evaluation:
+  tasks: ["easy", "medium", "hard"]
+  output_format: json
+  metrics:
+    - final_score
+    - tests_passed_ratio
+    - attempts_count
+    - code_quality
