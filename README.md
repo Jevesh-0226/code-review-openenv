@@ -1,3 +1,12 @@
+---
+title: CodeReviewEnv
+emoji: 🧠
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_file: evaluate.py
+pinned: false
+---
 # CodeReviewEnv: AI Code Debugging Environment
 
 An OpenEnv compliant environment where AI agents learn to debug and improve Python code through real-world code review tasks. This hackathon project demonstrates a production-ready reinforcement learning environment with full API support, deterministic evaluation, and Docker deployment.
