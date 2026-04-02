@@ -4,7 +4,7 @@ import json
 import sys
 import time
 from typing import Dict, List, Any
-from http.server import SimpleHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from env.code_review_env import create_env
 from env.tasks import get_all_tasks
@@ -253,12 +253,43 @@ def main():
     return results
 
 
+class SimpleHandler(BaseHTTPRequestHandler):
+    """Custom HTTP handler to display success message."""
+    
+    def do_GET(self):
+        """Handle GET requests with HTML response."""
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
+        self.end_headers()
+
+        message = """
+        <html>
+        <head><title>CodeReviewEnv</title></head>
+        <body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px;">
+            <h1>CodeReviewEnv is Running ✅</h1>
+            <p style="font-size: 16px; color: #555;">
+                Evaluation completed successfully.
+            </p>
+            <p style="font-size: 14px; color: #888;">
+                Check logs for detailed results.
+            </p>
+        </body>
+        </html>
+        """
+
+        self.wfile.write(message.encode("utf-8"))
+    
+    def log_message(self, format, *args):
+        """Suppress HTTP logging."""
+        pass
+
+
 def run_server():
     """Start a minimal HTTP server for Hugging Face Spaces."""
     port = 7860
     print(f"\nStarting server at http://0.0.0.0:{port}")
     
-    server = HTTPServer(("0.0.0.0", port), SimpleHTTPRequestHandler)
+    server = HTTPServer(("0.0.0.0", port), SimpleHandler)
     server.serve_forever()
 
 
