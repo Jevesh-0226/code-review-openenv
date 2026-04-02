@@ -250,6 +250,9 @@ def main():
     evaluator.print_summary()
     evaluator.save_results()
     
+    # Ensure all output is flushed
+    sys.stdout.flush()
+    
     return results
 
 
@@ -293,18 +296,29 @@ class SimpleHandler(BaseHTTPRequestHandler):
 def run_server():
     """Start a minimal HTTP server for Hugging Face Spaces."""
     port = 7860
-    print(f"\nStarting server at http://0.0.0.0:{port}")
+    print(f"\nStarting server at http://0.0.0.0:{port}", flush=True)
+    sys.stdout.flush()
     
     server = HTTPServer(("0.0.0.0", port), SimpleHandler)
     server.serve_forever()
 
 
 if __name__ == "__main__":
+    print("Starting CodeReviewEnv Evaluation...", flush=True)
+    sys.stdout.flush()
+    
+    # Run evaluation completely first
     results = main()
+    
+    # Flush all output before starting server
+    sys.stdout.flush()
     
     print("\n" + "=" * 70)
     print("Evaluation completed successfully!")
-    print("Launching minimal server for Hugging Face Spaces...")
     print("=" * 70)
     
+    print("\nLaunching HTTP server for Hugging Face Spaces...", flush=True)
+    sys.stdout.flush()
+    
+    # ONLY after evaluation completes, start server
     run_server()
