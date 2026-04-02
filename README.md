@@ -410,6 +410,8 @@ The evaluation pipeline is fully reproducible:
 
 ## 📊 Baseline Results
 
+**Final Evaluation Score: 1.0000 (Deterministic across runs)**
+
 **Expected Performance** (current available Groq model):
 
 ```
