@@ -4,6 +4,7 @@ import json
 import sys
 import time
 from typing import Dict, List, Any
+from http.server import SimpleHTTPRequestHandler, HTTPServer
 
 from env.code_review_env import create_env
 from env.tasks import get_all_tasks
@@ -252,14 +253,21 @@ def main():
     return results
 
 
+def run_server():
+    """Start a minimal HTTP server for Hugging Face Spaces."""
+    port = 7860
+    print(f"\nStarting server at http://0.0.0.0:{port}")
+    
+    server = HTTPServer(("0.0.0.0", port), SimpleHTTPRequestHandler)
+    server.serve_forever()
+
+
 if __name__ == "__main__":
     results = main()
     
     print("\n" + "=" * 70)
     print("Evaluation completed successfully!")
-    print("Keeping container alive for Hugging Face Spaces...")
+    print("Launching minimal server for Hugging Face Spaces...")
     print("=" * 70)
     
-    # Keep container alive by sleeping continuously
-    while True:
-        time.sleep(60)
+    run_server()
