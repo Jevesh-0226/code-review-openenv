@@ -254,4 +254,12 @@ def main():
 
 if __name__ == "__main__":
     results = main()
-    sys.exit(0)
+    
+    print("\n" + "=" * 70)
+    print("Evaluation completed successfully!")
+    print("Keeping container alive for Hugging Face Spaces...")
+    print("=" * 70)
+    
+    # Keep container alive by sleeping continuously
+    while True:
+        time.sleep(60)
