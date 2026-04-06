@@ -1,0 +1,19 @@
+{
+    "pythonVersion": "3.14",
+    "pythonPlatform": "Windows",
+    "typeCheckingMode": "basic",
+    "include": ["server", "env", "agent", "."],
+    "exclude": [
+        ".venv",
+        "**/__pycache__",
+        "**/.pytest_cache",
+        "**/.git",
+        "**/.vscode",
+        "**/.*",
+        "**/node_modules",
+        "**/.idea",
+        "**/build",
+        "**/dist",
+        "**/*.egg-info"
+    ]
+}
