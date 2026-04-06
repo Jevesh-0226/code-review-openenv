@@ -1,7 +1,7 @@
 """FastAPI server for CodeReviewEnv OpenEnv compliance."""
 
 from fastapi import FastAPI
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from env.code_review_env import CodeReviewEnv
 
 # Create FastAPI app instance
@@ -53,7 +53,7 @@ def health_check():
 
 
 @app.post("/reset")
-def reset_endpoint(data: dict = None):
+def reset_endpoint(data: Optional[Dict[str, Any]] = None):
     """
     Reset the environment and get initial observation.
     
@@ -88,7 +88,7 @@ def reset_endpoint(data: dict = None):
 
 
 @app.post("/step")
-def step_endpoint(data: dict = None):
+def step_endpoint(data: Optional[Dict[str, Any]] = None):
     """
     Step the environment with the agent's fixed code.
     
