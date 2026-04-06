@@ -4,7 +4,7 @@ import ast
 import re
 import sys
 from io import StringIO
-from typing import Dict, Any, Tuple, List
+from typing import Dict, Any, Tuple, List, Optional
 from dataclasses import dataclass
 import traceback
 
@@ -39,7 +39,7 @@ class Grader:
         except Exception as e:
             return False, f"Parse error: {str(e)}"
 
-    def extract_function(self, code: str, function_name: str) -> str:
+    def extract_function(self, code: str, function_name: str) -> Optional[str]:
         """Extract function from code block."""
         try:
             tree = ast.parse(code)
