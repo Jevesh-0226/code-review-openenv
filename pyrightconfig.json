@@ -3,8 +3,14 @@
     "venv": ".venv",
     "pythonVersion": "3.14",
     "pythonPlatform": "Windows",
+    "pythonPath": "${workspaceFolder}/.venv/Scripts/python.exe",
     "typeCheckingMode": "basic",
-    "include": ["server", "env", "agent", "."],
+    "include": [
+        "server",
+        "env",
+        "agent",
+        "."
+    ],
     "exclude": [
         ".venv",
         "**/__pycache__",
