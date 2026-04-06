@@ -1,51 +1,8 @@
 """FastAPI server for CodeReviewEnv inference and interaction."""
 
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import Optional, List, Any, Dict
+from fastapi import FastAPI
+from typing import Dict, Any
 from env.code_review_env import CodeReviewEnv
-
-# ============================================================================
-# Pydantic Models for request/response validation
-# ============================================================================
-
-class ResetRequest(BaseModel):
-    """Request model for /reset endpoint."""
-    difficulty: str = "easy"
-
-
-class StepRequest(BaseModel):
-    """Request model for /step endpoint."""
-    fixed_code: str
-
-
-class ResetResponse(BaseModel):
-    """Response model for /reset endpoint."""
-    problem_description: str
-    buggy_code: str
-    test_cases: List[Dict[str, Any]]
-    attempt_count: int
-    best_score: float
-    previous_feedback: Optional[str] = None
-
-
-class StepResponse(BaseModel):
-    """Response model for /step endpoint."""
-    observation: Dict[str, Any]
-    reward: float
-    done: bool
-    info: Dict[str, Any]
-
-
-class StateResponse(BaseModel):
-    """Response model for /state endpoint."""
-    attempt_count: int
-    best_score: float
-    done: bool
-    difficulty: Optional[str]
-    rewards: List[float]
-    average_reward: float
-
 
 # ============================================================================
 # FastAPI Application
@@ -64,25 +21,25 @@ env = CodeReviewEnv(seed=42)
 def observation_to_dict(obs) -> Dict[str, Any]:
     """Convert Observation dataclass to JSON-serializable dictionary."""
     return {
-        "problem_description": obs.problem_description,
-        "buggy_code": obs.buggy_code,
-        "test_cases": obs.test_cases,
-        "attempt_count": obs.attempt_count,
-        "best_score": obs.best_score,
-        "previous_feedback": obs.previous_feedback
+        "problem_description": str(obs.problem_description),
+        "buggy_code": str(obs.buggy_code),
+        "test_cases": list(obs.test_cases),
+        "attempt_count": int(obs.attempt_count),
+        "best_score": float(obs.best_score),
+        "previous_feedback": str(obs.previous_feedback) if obs.previous_feedback else None
     }
 
 
 def info_to_dict(info) -> Dict[str, Any]:
     """Convert Info dataclass to JSON-serializable dictionary."""
     return {
-        "test_passed": info.test_passed,
-        "test_total": info.test_total,
+        "test_passed": int(info.test_passed),
+        "test_total": int(info.test_total),
         "test_score": float(info.test_score),
-        "syntax_valid": info.syntax_valid,
+        "syntax_valid": bool(info.syntax_valid),
         "code_quality": float(info.code_quality),
-        "error_messages": info.error_messages,
-        "test_details": info.test_details
+        "error_messages": list(info.error_messages),
+        "test_details": list(info.test_details)
     }
 
 
@@ -90,125 +47,110 @@ def info_to_dict(info) -> Dict[str, Any]:
 # API Endpoints
 # ============================================================================
 
-@app.post("/reset", response_model=ResetResponse)
-async def reset_endpoint(request: ResetRequest):
+@app.get("/")
+def root():
+    """Root endpoint - returns API status."""
+    return {"message": "CodeReviewEnv API is running", "status": "active"}
+
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint to verify server is running."""
+    return {"status": "healthy", "message": "API is operational"}
+
+
+@app.post("/reset")
+def reset_endpoint(data: dict = None):
     """
     Reset the environment and get initial observation.
     
-    Args:
-        request: ResetRequest with difficulty level
-        
-    Returns:
-        Initial observation with problem description, buggy code, test cases
+    POST body: {"difficulty": "easy" | "medium" | "hard"}
+    Returns: Initial observation
     """
-    # Validate difficulty
-    if request.difficulty not in ["easy", "medium", "hard"]:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid difficulty. Must be 'easy', 'medium', or 'hard', got '{request.difficulty}'"
-        )
-    
     try:
-        # Reset environment
-        observation = env.reset(difficulty=request.difficulty)
+        if data is None:
+            data = {}
         
-        # Convert to JSON-serializable dict
-        return ResetResponse(
-            problem_description=observation.problem_description,
-            buggy_code=observation.buggy_code,
-            test_cases=observation.test_cases,
-            attempt_count=observation.attempt_count,
-            best_score=observation.best_score,
-            previous_feedback=observation.previous_feedback
-        )
+        difficulty = data.get("difficulty", "easy")
+        
+        # Validate difficulty
+        if difficulty not in ["easy", "medium", "hard"]:
+            return {"error": f"Invalid difficulty '{difficulty}'. Must be 'easy', 'medium', or 'hard'"}
+        
+        # Reset environment
+        observation = env.reset(difficulty=difficulty)
+        
+        # Return as plain dict
+        return {
+            "problem_description": str(observation.problem_description),
+            "buggy_code": str(observation.buggy_code),
+            "test_cases": observation.test_cases,
+            "attempt_count": int(observation.attempt_count),
+            "best_score": float(observation.best_score),
+            "previous_feedback": observation.previous_feedback
+        }
     
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error in /reset: {str(e)}"
-        )
+        return {"error": str(e)}
 
 
-@app.post("/step", response_model=StepResponse)
-async def step_endpoint(request: StepRequest):
+@app.post("/step")
+def step_endpoint(data: dict = None):
     """
     Step the environment with the agent's fixed code.
     
-    Args:
-        request: StepRequest with fixed code
-        
-    Returns:
-        Tuple of (observation, reward, done, info) as JSON
+    POST body: {"fixed_code": "..."}
+    Returns: observation, reward, done, info
     """
     try:
+        if data is None:
+            data = {}
+        
+        fixed_code = data.get("fixed_code", "")
+        
         # Check if environment is initialized
         if env.current_task is None:
-            raise HTTPException(
-                status_code=400,
-                detail="Environment not initialized. Call /reset first."
-            )
+            return {"error": "Environment not initialized. Call /reset first."}
         
         # Step the environment
-        observation, reward, done, info = env.step(request.fixed_code)
+        observation, reward, done, info = env.step(fixed_code)
         
-        # Convert all to JSON-serializable dicts
+        # Convert all to plain dicts
         observation_dict = observation_to_dict(observation)
         info_dict = info_to_dict(info)
         
-        return StepResponse(
-            observation=observation_dict,
-            reward=float(reward),
-            done=done,
-            info=info_dict
-        )
+        return {
+            "observation": observation_dict,
+            "reward": float(reward),
+            "done": bool(done),
+            "info": info_dict
+        }
     
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error in /step: {str(e)}"
-        )
+        return {"error": str(e)}
 
 
-@app.get("/state", response_model=StateResponse)
-async def state_endpoint():
+@app.get("/state")
+def state_endpoint():
     """
     Get the current state of the environment.
     
-    Returns:
-        Current state with attempt count, best score, done status, and rewards
+    Returns: Current state with attempt count, best score, rewards
     """
     try:
         state = env.state()
         
-        return StateResponse(
-            attempt_count=state["attempt_count"],
-            best_score=float(state["best_score"]),
-            done=state["done"],
-            difficulty=state["difficulty"],
-            rewards=[float(r) for r in state["rewards"]],
-            average_reward=float(state["average_reward"])
-        )
+        return {
+            "attempt_count": int(state["attempt_count"]),
+            "best_score": float(state["best_score"]),
+            "done": bool(state["done"]),
+            "difficulty": state["difficulty"],
+            "rewards": [float(r) for r in state["rewards"]],
+            "average_reward": float(state["average_reward"])
+        }
     
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error in /state: {str(e)}"
-        )
-
-
-# ============================================================================
-# Health Check Endpoint
-# ============================================================================
-
-@app.get("/health")
-async def health_check():
-    """Health check endpoint to verify server is running."""
-    return {
-        "status": "healthy",
-        "message": "CodeReviewEnv API is running"
-    }
+        return {"error": str(e)}
 
 
 if __name__ == "__main__":
