@@ -12,11 +12,13 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 COPY env/ ./env/
 COPY agent/ ./agent/
-COPY evaluate.py .
-COPY run.py .
+COPY inference.py .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Default command: run evaluation
-CMD ["python", "evaluate.py"]
+# Expose port for FastAPI server
+EXPOSE 7860
+
+# Default command: run FastAPI server with uvicorn
+CMD ["uvicorn", "inference:app", "--host", "0.0.0.0", "--port", "7860"]
