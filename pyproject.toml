@@ -1,0 +1,21 @@
+[project]
+name = "code-review-openenv"
+version = "0.1.0"
+description = "OpenEnv Code Review Environment for AI debugging tasks"
+authors = [
+    { name = "Jevesh", email = "iamjevesh@gmail.com" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+    "fastapi",
+    "uvicorn",
+]
+
+[tool.setuptools]
+packages = ["env", "agent"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
