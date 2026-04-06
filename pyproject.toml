@@ -11,10 +11,14 @@ requires-python = ">=3.10"
 dependencies = [
     "fastapi",
     "uvicorn",
+    "openenv>=0.1.0",
 ]
 
+[project.scripts]
+server = "server.app:app"
+
 [tool.setuptools]
-packages = ["env", "agent"]
+packages = ["env", "agent", "server"]
 
 [build-system]
 requires = ["setuptools>=61.0"]
