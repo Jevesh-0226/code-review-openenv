@@ -1,8 +1,8 @@
 """FastAPI server for CodeReviewEnv OpenEnv compliance."""
 
-from fastapi import FastAPI
+from fastapi import FastAPI  # type: ignore
 from typing import Dict, Any, Optional
-from env.code_review_env import CodeReviewEnv
+from env.code_review_env import CodeReviewEnv  # type: ignore
 
 # Create FastAPI app instance
 app = FastAPI(

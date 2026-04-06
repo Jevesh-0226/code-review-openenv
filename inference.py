@@ -1,8 +1,8 @@
 """FastAPI server for CodeReviewEnv inference and interaction."""
 
-from fastapi import FastAPI
+from fastapi import FastAPI  # type: ignore
 from typing import Dict, Any
-from env.code_review_env import CodeReviewEnv
+from env.code_review_env import CodeReviewEnv  # type: ignore
 
 # ============================================================================
 # FastAPI Application

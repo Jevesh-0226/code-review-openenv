@@ -4,7 +4,7 @@
     "pythonVersion": "3.14",
     "pythonPlatform": "Windows",
     "pythonPath": "${workspaceFolder}/.venv/Scripts/python.exe",
-    "typeCheckingMode": "basic",
+    "typeCheckingMode": "off",
     "include": [
         "server",
         "env",
@@ -18,6 +18,15 @@
         "**/.git",
         "**/.vscode",
         "**/.*",
+        "**/node_modules",
+        "**/.idea",
+        "**/build",
+        "**/dist",
+        "**/*.egg-info"
+    ],
+    "reportMissingImports": false,
+    "reportMissingTypeStubs": false
+}
         "**/node_modules",
         "**/.idea",
         "**/build",
