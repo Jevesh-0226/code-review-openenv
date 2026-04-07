@@ -20,5 +20,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Expose port for FastAPI server
 EXPOSE 7860
 
-# Default command: run inference script
-CMD ["python", "inference.py"]
+# Default command: run FastAPI server
+CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "7860"]
