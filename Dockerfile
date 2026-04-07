@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 COPY env/ ./env/
 COPY agent/ ./agent/
+COPY server/ ./server/
 COPY inference.py .
 
 # Install Python dependencies
@@ -21,4 +22,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 7860
 
 # Default command: run FastAPI server with uvicorn
-CMD ["uvicorn", "inference:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "7860"]
