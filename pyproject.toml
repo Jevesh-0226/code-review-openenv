@@ -9,9 +9,13 @@ readme = "README.md"
 requires-python = ">=3.10"
 
 dependencies = [
+    "openenv>=0.1.0",
+    "openai",
     "fastapi",
     "uvicorn",
-    "openenv>=0.1.0",
+    "requests",
+    "groq",
+    "python-dotenv",
 ]
 
 [project.scripts]

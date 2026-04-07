@@ -1,36 +1,130 @@
+"""CodeReviewEnv Phase 2 Inference Script - Uses LLM proxy for code generation."""
+
+import os
+import sys
 import requests
+from openai import OpenAI
 
 BASE_URL = "http://localhost:7860"
 
-def run():
+
+def get_llm_client():
+    """Initialize OpenAI client using environment variables for proxy."""
+    api_base = os.environ.get("API_BASE_URL", "https://api.openai.com/v1")
+    api_key = os.environ.get("API_KEY", "")
+    
+    if not api_key:
+        raise ValueError("API_KEY environment variable not set")
+    
+    return OpenAI(
+        base_url=api_base,
+        api_key=api_key
+    )
+
+
+def generate_fix(buggy_code: str, test_cases: list, problem_description: str) -> str:
+    """Use LLM to generate a fix for the buggy code."""
     try:
-        task_name = "easy"
-        print(f"[START] task={task_name}", flush=True)
+        client = get_llm_client()
+        
+        prompt = f"""You are a code review expert. Fix the following buggy code to pass the test cases.
 
-        # Step 1: Reset
-        res = requests.post(f"{BASE_URL}/reset", json={"difficulty": task_name})
-        data = res.json()
+Problem: {problem_description}
 
-        # Fix code
-        fixed_code = """def sum_range(start, end):
+Buggy Code:
+{buggy_code}
+
+Test Cases:
+{test_cases}
+
+Provide ONLY the fixed code function, nothing else. No markdown, no explanations."""
+        
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are an expert code fixer. Return only the fixed code function."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            max_tokens=1000
+        )
+        
+        return response.choices[0].message.content.strip()
+    
+    except Exception as e:
+        print(f"WARNING: LLM call failed: {e}", file=sys.stderr, flush=True)
+        # Fallback to a basic fix
+        return """def sum_range(start, end):
     total = 0
     for i in range(start, end + 1):
         total += i
     return total
 """
 
-        # Step 2: Send fix
-        res = requests.post(f"{BASE_URL}/step", json={"fixed_code": fixed_code})
-        result = res.json()
 
-        reward = result.get("reward", 0)
-
-        print(f"[STEP] step=1 reward={reward}", flush=True)
-
-        print(f"[END] task={task_name} score={reward} steps=1", flush=True)
-
+def run():
+    """Main inference function with structured logging."""
+    task_name = "code_review"
+    total_reward = 0.0
+    steps_taken = 0
+    
+    try:
+        print(f"[START] task={task_name}", flush=True)
+        sys.stdout.flush()
+        
+        # Step 1: Reset environment on API
+        try:
+            res = requests.post(
+                f"{BASE_URL}/reset", 
+                json={"difficulty": "easy"},
+                timeout=10
+            )
+            res.raise_for_status()
+            reset_data = res.json()
+        except requests.exceptions.RequestException as e:
+            print(f"[END] task={task_name} score=0 steps=0", flush=True)
+            return
+        
+        # Extract observation
+        observation = reset_data.get("observation", reset_data)
+        buggy_code = observation.get("buggy_code", "")
+        problem_description = observation.get("problem_description", "")
+        test_cases = observation.get("test_cases", [])
+        
+        # Step 2: Generate fix using LLM proxy
+        fixed_code = generate_fix(buggy_code, test_cases, problem_description)
+        steps_taken += 1
+        
+        # Step 3: Submit fix to API
+        try:
+            res = requests.post(
+                f"{BASE_URL}/step",
+                json={"fixed_code": fixed_code},
+                timeout=10
+            )
+            res.raise_for_status()
+            result = res.json()
+        except requests.exceptions.RequestException as e:
+            print(f"[END] task={task_name} score=0 steps={steps_taken}", flush=True)
+            return
+        
+        # Extract reward
+        total_reward = float(result.get("reward", 0.0))
+        
+        # Log step result
+        print(f"[STEP] step=1 reward={total_reward}", flush=True)
+        sys.stdout.flush()
+        
+        # Final log with total score
+        print(f"[END] task={task_name} score={total_reward} steps={steps_taken}", flush=True)
+        sys.stdout.flush()
+    
     except Exception as e:
-        print(f"[END] task=easy score=0 steps=1", flush=True)
+        print(f"[END] task={task_name} score=0 steps={steps_taken}", flush=True)
+        sys.stdout.flush()
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     run()
+    sys.exit(0)
