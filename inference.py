@@ -1,158 +1,72 @@
-"""FastAPI server for CodeReviewEnv inference and interaction."""
+"""Client script for calling CodeReviewEnv API endpoints."""
 
-from fastapi import FastAPI  # type: ignore
-from typing import Dict, Any
-from env.code_review_env import CodeReviewEnv  # type: ignore
+import requests
 
-# ============================================================================
-# FastAPI Application
-# ============================================================================
-
-app = FastAPI(
-    title="CodeReviewEnv API",
-    description="OpenEnv API for AI code review and debugging",
-    version="1.0.0"
-)
-
-# Global environment instance
-env = CodeReviewEnv(seed=42)
+BASE_URL = "http://localhost:7860"
 
 
-def observation_to_dict(obs) -> Dict[str, Any]:
-    """Convert Observation dataclass to JSON-serializable dictionary."""
-    return {
-        "problem_description": str(obs.problem_description),
-        "buggy_code": str(obs.buggy_code),
-        "test_cases": list(obs.test_cases),
-        "attempt_count": int(obs.attempt_count),
-        "best_score": float(obs.best_score),
-        "previous_feedback": str(obs.previous_feedback) if obs.previous_feedback else None
-    }
-
-
-def info_to_dict(info) -> Dict[str, Any]:
-    """Convert Info dataclass to JSON-serializable dictionary."""
-    return {
-        "test_passed": int(info.test_passed),
-        "test_total": int(info.test_total),
-        "test_score": float(info.test_score),
-        "syntax_valid": bool(info.syntax_valid),
-        "code_quality": float(info.code_quality),
-        "error_messages": list(info.error_messages),
-        "test_details": list(info.test_details)
-    }
-
-
-# ============================================================================
-# API Endpoints
-# ============================================================================
-
-@app.get("/")
-def root():
-    """Root endpoint - returns API status."""
-    return {"message": "CodeReviewEnv API is running", "status": "active"}
-
-
-@app.get("/health")
-def health_check():
-    """Health check endpoint to verify server is running."""
-    return {"status": "healthy", "message": "API is operational"}
-
-
-@app.post("/reset")
-def reset_endpoint(data: dict = None):
-    """
-    Reset the environment and get initial observation.
-    
-    POST body: {"difficulty": "easy" | "medium" | "hard"}
-    Returns: Initial observation
-    """
+def run():
+    """Run inference by calling the deployed API endpoints."""
     try:
-        if data is None:
-            data = {}
+        # Step 1: Reset environment
+        print("Step 1: Resetting environment...")
+        res = requests.post(f"{BASE_URL}/reset", json={"difficulty": "easy"})
+        data = res.json()
         
-        difficulty = data.get("difficulty", "easy")
+        if "error" in data:
+            print(f"Reset error: {data['error']}")
+            return
         
-        # Validate difficulty
-        if difficulty not in ["easy", "medium", "hard"]:
-            return {"error": f"Invalid difficulty '{difficulty}'. Must be 'easy', 'medium', or 'hard'"}
+        observation = data.get("observation", data)
+        print(f"Problem: {observation['problem_description'][:100]}...")
         
-        # Reset environment
-        observation = env.reset(difficulty=difficulty)
+        # Step 2: Extract buggy code
+        buggy_code = observation["buggy_code"]
+        print(f"\nBuggy code:\n{buggy_code}")
         
-        # Return as plain dict
-        return {
-            "problem_description": str(observation.problem_description),
-            "buggy_code": str(observation.buggy_code),
-            "test_cases": observation.test_cases,
-            "attempt_count": int(observation.attempt_count),
-            "best_score": float(observation.best_score),
-            "previous_feedback": observation.previous_feedback
-        }
-    
+        # Step 3: Apply fix
+        fixed_code = """def sum_range(start, end):
+    total = 0
+    for i in range(start, end + 1):
+        total += i
+    return total
+"""
+        print(f"\nFixed code:\n{fixed_code}")
+        
+        # Step 4: Send fix to API
+        print("\nStep 2: Submitting fix...")
+        res = requests.post(f"{BASE_URL}/step", json={"fixed_code": fixed_code})
+        result = res.json()
+        
+        if "error" in result:
+            print(f"Step error: {result['error']}")
+            return
+        
+        # Step 5: Display results
+        print("\n" + "="*60)
+        print("FINAL RESULT")
+        print("="*60)
+        print(f"Reward: {result.get('reward', 'N/A')}")
+        print(f"Done: {result.get('done', 'N/A')}")
+        
+        info = result.get("info", {})
+        print(f"\nTest Results:")
+        print(f"  Tests Passed: {info.get('test_passed', 'N/A')} / {info.get('test_total', 'N/A')}")
+        print(f"  Test Score: {info.get('test_score', 'N/A')}")
+        print(f"  Syntax Valid: {info.get('syntax_valid', 'N/A')}")
+        print(f"  Code Quality: {info.get('code_quality', 'N/A')}")
+        
+        if info.get("error_messages"):
+            print(f"\nError Messages:")
+            for msg in info["error_messages"]:
+                print(f"  - {msg}")
+
+    except requests.exceptions.ConnectionError:
+        print(f"ERROR: Could not connect to API at {BASE_URL}")
+        print("Make sure the server is running with: python -m server.app:main")
     except Exception as e:
-        return {"error": str(e)}
-
-
-@app.post("/step")
-def step_endpoint(data: dict = None):
-    """
-    Step the environment with the agent's fixed code.
-    
-    POST body: {"fixed_code": "..."}
-    Returns: observation, reward, done, info
-    """
-    try:
-        if data is None:
-            data = {}
-        
-        fixed_code = data.get("fixed_code", "")
-        
-        # Check if environment is initialized
-        if env.current_task is None:
-            return {"error": "Environment not initialized. Call /reset first."}
-        
-        # Step the environment
-        observation, reward, done, info = env.step(fixed_code)
-        
-        # Convert all to plain dicts
-        observation_dict = observation_to_dict(observation)
-        info_dict = info_to_dict(info)
-        
-        return {
-            "observation": observation_dict,
-            "reward": float(reward),
-            "done": bool(done),
-            "info": info_dict
-        }
-    
-    except Exception as e:
-        return {"error": str(e)}
-
-
-@app.get("/state")
-def state_endpoint():
-    """
-    Get the current state of the environment.
-    
-    Returns: Current state with attempt count, best score, rewards
-    """
-    try:
-        state = env.state()
-        
-        return {
-            "attempt_count": int(state["attempt_count"]),
-            "best_score": float(state["best_score"]),
-            "done": bool(state["done"]),
-            "difficulty": state["difficulty"],
-            "rewards": [float(r) for r in state["rewards"]],
-            "average_reward": float(state["average_reward"])
-        }
-    
-    except Exception as e:
-        return {"error": str(e)}
+        print(f"ERROR: {str(e)}")
 
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+    run()
