@@ -1,9 +1,9 @@
-"""CodeReviewEnv Phase 2 Inference Script - Uses LLM proxy for code generation."""
+"""CodeReviewEnv Phase 2 Inference Script - Direct environment integration with LLM proxy."""
 
 import os
 import sys
-import requests
 from openai import OpenAI
+from env.code_review_env import CodeReviewEnv
 
 BASE_URL = "http://localhost:7860"
 
@@ -72,44 +72,22 @@ def run():
         print(f"[START] task={task_name}", flush=True)
         sys.stdout.flush()
         
-        # Step 1: Reset environment on API
-        try:
-            res = requests.post(
-                f"{BASE_URL}/reset", 
-                json={"difficulty": "easy"},
-                timeout=10
-            )
-            res.raise_for_status()
-            reset_data = res.json()
-        except requests.exceptions.RequestException as e:
-            print(f"[END] task={task_name} score=0 steps=0", flush=True)
-            return
+        # Initialize environment directly
+        env = CodeReviewEnv(seed=42)
         
-        # Extract observation
-        observation = reset_data.get("observation", reset_data)
-        buggy_code = observation.get("buggy_code", "")
-        problem_description = observation.get("problem_description", "")
-        test_cases = observation.get("test_cases", [])
+        # Step 1: Reset environment
+        observation = env.reset(difficulty="easy")
+        buggy_code = observation.buggy_code
+        problem_description = observation.problem_description
+        test_cases = observation.test_cases
         
         # Step 2: Generate fix using LLM proxy
-        fixed_code = generate_fix(buggy_code, test_cases, problem_description)
+        fixed_code = generate_fix(str(buggy_code), test_cases, str(problem_description))
         steps_taken += 1
         
-        # Step 3: Submit fix to API
-        try:
-            res = requests.post(
-                f"{BASE_URL}/step",
-                json={"fixed_code": fixed_code},
-                timeout=10
-            )
-            res.raise_for_status()
-            result = res.json()
-        except requests.exceptions.RequestException as e:
-            print(f"[END] task={task_name} score=0 steps={steps_taken}", flush=True)
-            return
-        
-        # Extract reward
-        total_reward = float(result.get("reward", 0.0))
+        # Step 3: Step the environment with the fix
+        observation_new, reward, done, info = env.step(fixed_code)
+        total_reward = float(reward)
         
         # Log step result
         print(f"[STEP] step=1 reward={total_reward}", flush=True)
