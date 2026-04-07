@@ -20,16 +20,28 @@ tasks:
     difficulty: easy
     description: "Fix off-by-one error in range-based sum function"
     points: 25
+    grader:
+      type: python
+      module: env.grader
+      function: Grader.grade
     
   - name: medium
     difficulty: medium
     description: "Fix string reversal logic with proper whitespace handling"
     points: 35
+    grader:
+      type: python
+      module: env.grader
+      function: Grader.grade
     
   - name: hard
     difficulty: hard
     description: "Optimize recursive Fibonacci with memoization and edge case handling"
     points: 40
+    grader:
+      type: python
+      module: env.grader
+      function: Grader.grade
 
 # API support
 api:

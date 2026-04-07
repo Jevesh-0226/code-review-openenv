@@ -179,23 +179,20 @@ class Grader:
             quality_score = max(0.0, quality_score - 0.3)
 
         # Step 5: Calculate final score
-        # CRITICAL: If all tests pass, score is 1.0 (perfect solution)
-        if passed == len(test_cases) and syntax_score == 1.0:
-            final_score = 1.0
-        else:
-            # Components: 60% test cases, 20% syntax, 20% quality
-            final_score = (
-                test_case_score * 0.6 +
-                syntax_score * 0.2 +
-                quality_score * 0.2
-            )
+        # Components: 60% test cases, 20% syntax, 20% quality
+        final_score = (
+            test_case_score * 0.6 +
+            syntax_score * 0.2 +
+            quality_score * 0.2
+        )
 
-            # Apply penalties for significant issues
-            if timeouts > 0:
-                final_score -= 0.1 * min(1, timeouts / len(test_cases))
+        # Apply penalties for significant issues
+        if timeouts > 0:
+            final_score -= 0.1 * min(1, timeouts / len(test_cases))
 
-            # Clamp to [0.0, 1.0]
-            final_score = max(0.0, min(1.0, final_score))
+        # Clamp to (0.01, 0.99) to ensure strictly between 0 and 1
+        # Perfect solutions get 0.99, not 1.0
+        final_score = max(0.01, min(0.99, final_score))
 
         return GradeResult(
             passed_tests=passed,
